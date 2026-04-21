@@ -1,0 +1,401 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị hiện diện - DNCC</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="https://dncc.edu.vn/public/quantri/filemanager/source/logo-dncc.ico">
+    <style>
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .dashboard-header {
+            background: #fff;
+            padding: 20px;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 25px;
+        }
+
+        .card-kpi {
+            border: none;
+            border-radius: 12px;
+            color: white;
+            transition: 0.3s;
+        }
+
+            .card-kpi:hover {
+                transform: scale(1.02);
+            }
+
+        .bg-blue {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+        }
+
+        .bg-green {
+            background: linear-gradient(45deg, #11998e, #38ef7d);
+        }
+
+        .bg-orange {
+            background: linear-gradient(45deg, #f12711, #f5af19);
+        }
+
+        .bg-red {
+            background: linear-gradient(45deg, #cb2d3e, #ef473a);
+        }
+
+        .filter-section {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .nav-tabs .nav-link {
+            font-weight: 600;
+            color: #495057;
+            border: none;
+            padding: 12px 25px;
+        }
+
+            .nav-tabs .nav-link.active {
+                color: #0d6efd;
+                border-bottom: 3px solid #0d6efd;
+                background: none;
+            }
+
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+        <h5 class="mt-3">Đang xử lý dữ liệu báo cáo...</h5>
+    </div>
+
+    <div class="dashboard-header text-center">
+        <h3 class="fw-bold text-danger text-uppercase"><img src="https://dncc.edu.vn/public/quantri/filemanager/source/logo-dncc.ico" style="width: 70px;"> Hệ thống Quản trị hiện diện</h3>
+    </div>
+
+    <div class="container-fluid px-4">
+
+        <div class="filter-section">
+            <div class="row g-3">
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small text-muted">Chọn năm:</label>
+                    <select id="selYear" class="form-select border-primary" onchange="applyFilters()">
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small text-muted">Lọc theo quý:</label>
+                    <select id="selQuarter" class="form-select" onchange="applyFilters()">
+                        <option value="">-- Tất cả quý --</option>
+                        <option value="Q1">Quý 1</option>
+                        <option value="Q2">Quý 2</option>
+                        <option value="Q3">Quý 3</option>
+                        <option value="Q4">Quý 4</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold small text-muted">Lọc theo tháng:</label>
+                    <select id="selMonth" class="form-select" onchange="applyFilters()">
+                        <option value="">-- Tất cả tháng --</option>
+                        <script>for (let i = 1; i <= 12; i++) document.write(`<option value="${i}">Tháng ${i}</option>`)</script>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-bold small text-muted">Hoặc khoảng thời gian:</label>
+                    <div class="input-group">
+                        <input type="date" id="dateFrom" class="form-control" onchange="applyFilters()">
+                        <span class="input-group-text">đến</span>
+                        <input type="date" id="dateTo" class="form-control" onchange="applyFilters()">
+                    </div>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Làm mới</button>
+                </div>
+            </div>
+        </div>
+
+        <ul class="nav nav-tabs mb-4" id="reportTabs">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#overview">Tổng quan báo cáo</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#details">Danh sách chi tiết</a></li>
+        </ul>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="overview">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card card-kpi bg-blue p-3">
+                            <p class="mb-1 small">Tổng số ca dạy</p>
+                            <h3 id="kpiTotal">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-kpi bg-green p-3">
+                            <p class="mb-1 small">Tổng giờ thực dạy (Phút)</p>
+                            <h3 id="kpiHours">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-kpi bg-orange p-3">
+                            <p class="mb-1 small">Giảng viên hoạt động</p>
+                            <h3 id="kpiTeachers">0</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-kpi bg-red p-3">
+                            <p class="mb-1 small">Số buổi vi phạm</p>
+                            <h3 id="kpiFraud">0</h3>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-4">
+                    <div class="col-md-8">
+                        <div class="card p-4 border-0 shadow-sm h-100">
+                            <h5 class="fw-bold mb-3"><i class="fa-solid fa-hotel me-2 text-primary"></i> Hiệu suất sử dụng phòng học (tổng số giờ)</h5>
+                            <div style="height: 350px;"><canvas id="roomChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card p-4 border-0 shadow-sm h-100">
+                            <h5 class="fw-bold mb-3 text-center">Tỷ lệ tuân thủ thời gian</h5>
+                            <div style="height: 350px; display: flex; align-items: center;"><canvas id="fraudChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="details">
+                <div class="card p-4 border-0 shadow-sm">
+                    <div class="d-flex justify-content-between mb-3 align-items-center">
+                        <h5 class="fw-bold m-0 text-primary">Dữ liệu chi tiết giảng dạy</h5>
+                        <div class="d-flex gap-2">
+                            <select id="filterStatus" class="form-select form-select-sm w-auto border-danger" onchange="applyFilters()">
+                                <option value="all">Tất cả buổi dạy</option>
+                                <option value="valid">Chỉ buổi dạy hợp lệ</option>
+                                <option value="fraud">Chỉ buổi có vi phạm</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table id="tblDetail" class="table table-hover table-bordered w-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Giảng viên</th>
+                                    <th>Lớp học</th>
+                                    <th>Phòng học</th>
+                                    <th>Vào - Ra</th>
+                                    <th>Phút</th>
+                                    <th>Trạng thái</th>
+                                    <th>Chi tiết vi phạm</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <br /><p>Hỗ trợ kỹ thuật: Bùi Thế Tân - 0876774567</p>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        const API_URL = "https://hien-dien-qr.b-thetan.workers.dev/";
+        let allData = [];
+        let table = null;
+        let roomChart = null;
+        let fraudChart = null;
+
+        $(document).ready(function () {
+            initYearFilter();
+
+            loadData();
+        });
+
+        function initYearFilter() {
+            const currentYear = new Date().getFullYear();
+            const selYear = document.getElementById('selYear');
+            selYear.innerHTML = '';
+
+            for (let i = 0; i <= 3; i++) {
+                let y = currentYear - i;
+                let option = document.createElement('option');
+                option.value = y;
+                option.text = y + (i === 0 ? " (Năm hiện tại)" : "");
+                selYear.appendChild(option);
+            }
+            selYear.value = currentYear;
+        }
+
+        async function loadData() {
+            try {
+                const response = await fetch(API_URL);
+                const json = await response.json();
+                if (json.status === "success") {
+                    allData = json.data;
+                    applyFilters();
+                    $('#loadingOverlay').fadeOut();
+                }
+            } catch (e) {
+                alert("Không thể kết nối đến máy chủ dữ liệu!");
+            }
+        }
+
+        function applyFilters() {
+            const year = $('#selYear').val();
+            const quarter = $('#selQuarter').val();
+            const month = $('#selMonth').val();
+            const from = $('#dateFrom').val();
+            const to = $('#dateTo').val();
+            const status = $('#filterStatus').val();
+
+            let filtered = allData.filter(row => {
+                const d = new Date(row.scanDate);
+                const rYear = d.getFullYear();
+                const rMonth = d.getMonth() + 1;
+
+                if (year && rYear != year) return false;
+
+                if (quarter) {
+                    const qMap = { Q1: [1, 2, 3], Q2: [4, 5, 6], Q3: [7, 8, 9], Q4: [10, 11, 12] };
+                    if (!qMap[quarter].includes(rMonth)) return false;
+                }
+
+                if (month && rMonth != month) return false;
+
+                if (from && new Date(row.scanDate) < new Date(from)) return false;
+                if (to && new Date(row.scanDate) > new Date(to)) return false;
+
+                if (status === 'valid' && row.isFraud) return false;
+                if (status === 'fraud' && !row.isFraud) return false;
+
+                return true;
+            });
+
+            updateUI(filtered);
+        }
+
+        function updateUI(data) {
+            let totalMins = 0;
+            let fraudCount = 0;
+            let gvs = new Set();
+            let rooms = {};
+
+            data.forEach(r => {
+                totalMins += r.duration;
+                gvs.add(r.giaoVien);
+                if (r.isFraud) fraudCount++;
+
+                rooms[r.phong] = (rooms[r.phong] || 0) + r.duration;
+            });
+
+            $('#kpiTotal').text(data.length);
+            $('#kpiHours').text(totalMins.toLocaleString());
+            $('#kpiTeachers').text(gvs.size);
+            $('#kpiFraud').text(fraudCount);
+
+            renderRoomChart(rooms);
+            renderFraudChart(data.length - fraudCount, fraudCount);
+
+            renderTable(data);
+        }
+
+        function renderRoomChart(roomData) {
+            const ctx = document.getElementById('roomChart').getContext('2d');
+            const labels = Object.keys(roomData).sort((a, b) => roomData[b] - roomData[a]).slice(0, 5);
+            const values = labels.map(l => (roomData[l] / 60).toFixed(1));
+
+            if (roomChart) roomChart.destroy();
+            roomChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{ label: 'Số giờ dạy', data: values, backgroundColor: '#3498db', borderRadius: 8 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
+            });
+        }
+
+        function renderFraudChart(v, f) {
+            const ctx = document.getElementById('fraudChart').getContext('2d');
+            if (fraudChart) fraudChart.destroy();
+            fraudChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Hợp lệ', 'Vi phạm'],
+                    datasets: [{ data: [v, f], backgroundColor: ['#2ecc71', '#e74c3c'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        function renderTable(data) {
+            if (table) table.destroy();
+            $('#tblDetail tbody').empty();
+
+            data.forEach(r => {
+                const st = r.isFraud ? '<span class="badge bg-danger">Vi phạm</span>' : '<span class="badge bg-success">Hợp lệ</span>';
+                const errors = [r.fraudIn, r.fraudOut].filter(x => x).join(' | ');
+
+                $('#tblDetail tbody').append(`
+                    <tr>
+                        <td>${r.scanDate}</td>
+                        <td class="fw-bold">${r.giaoVien}</td>
+                        <td>${r.lop}</td>
+                        <td>${r.phong}</td>
+                        <td>${r.timeIn} - ${r.timeOut || '--'}</td>
+                        <td class="text-center">${r.duration}</td>
+                        <td class="text-center">${st}</td>
+                        <td class="small text-danger">${errors}</td>
+                    </tr>
+                `);
+            });
+
+            table = $('#tblDetail').DataTable({
+                language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
+                order: [[0, "desc"]]
+            });
+        }
+
+        function resetFilters() {
+            const currentYear = new Date().getFullYear();
+            $('#selYear').val(currentYear);
+            $('#selQuarter').val('');
+            $('#selMonth').val('');
+            $('#dateFrom').val('');
+            $('#dateTo').val('');
+            $('#filterStatus').val('all');
+            applyFilters();
+        }
+    </script>
+
+</body>
+</html>
