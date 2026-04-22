@@ -15,6 +15,7 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
+        /* GIAO DIỆN ĐĂNG NHẬP */
         #loginWrapper {
             height: 100vh;
             display: flex;
@@ -104,6 +105,10 @@
             align-items: center;
             display: none;
         }
+
+        .dt-buttons {
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -150,7 +155,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo quý:</label>
                         <select id="selQuarter" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả quý --</option>
+                            <option value="">-- Tất cả Quý --</option>
                             <option value="Q1">Quý 1</option>
                             <option value="Q2">Quý 2</option>
                             <option value="Q3">Quý 3</option>
@@ -160,7 +165,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo tháng:</label>
                         <select id="selMonth" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả tháng --</option>
+                            <option value="">-- Tất cả Tháng --</option>
                             <script>for (let i = 1; i <= 12; i++) document.write(`<option value="${i}">Tháng ${i}</option>`)</script>
                         </select>
                     </div>
@@ -264,17 +269,22 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        const AUTH_URL = "https://script.google.com/macros/s/AKfycby7qig-s08aimbhCHXOFKciE3QL8fTaAOzV2x1E2T72M5ZmnF8MJp1pupoesnnQGLV6/exec";
+        const AUTH_URL = "https://script.google.com/macros/s/AKfycby7qig-s08aimbhCHXOFKciE3QL8fTaAOzV2x1E2T72M5ZmnF8MJp1pupoesnnQGLV6/exec"; 
         const API_URL = "https://hien-dien-qr.b-thetan.workers.dev/";     
 
         let allData = []; let table = null; let roomChart = null; let fraudChart = null;
 
         $(document).ready(function () {
             if (localStorage.getItem('is_thanhtra_logged_in') === 'true') {
-                $('#txtWelcome').text(localStorage.getItem('tt_name'));
+                $('#txtWelcome').text("Chào, " + localStorage.getItem('tt_name'));
                 showDashboard();
             }
         });
@@ -282,38 +292,23 @@
         async function processLogin() {
             const email = $('#txtEmail').val().trim();
             const pin = $('#txtPin').val().trim();
-            const btn = $('#btnLogin');
-            const err = $('#loginError');
-
-            if (!email || !pin) { err.text("Vui lòng nhập Email và Mã PIN!"); return; }
-
-            btn.prop('disabled', true).text("Đang kiểm tra...");
-            err.text("");
-
+            if (!email || !pin) return;
+            $('#btnLogin').prop('disabled', true).text("Đang kiểm tra...");
             try {
                 const res = await fetch(`${AUTH_URL}?action=login&email=${encodeURIComponent(email)}&pin=${encodeURIComponent(pin)}`);
                 const json = await res.json();
-
                 if (json.status === "success") {
                     localStorage.setItem('is_thanhtra_logged_in', 'true');
                     localStorage.setItem('tt_name', json.name);
-                    $('#txtWelcome').text(json.name);
-                    showDashboard();
+                    location.reload();
                 } else {
-                    err.text(json.message);
-                    btn.prop('disabled', false).text("ĐĂNG NHẬP");
+                    $('#loginError').text(json.message);
+                    $('#btnLogin').prop('disabled', false).text("ĐĂNG NHẬP");
                 }
-            } catch (e) {
-                err.text("Lỗi kết nối đến máy chủ xác thực!");
-                btn.prop('disabled', false).text("ĐĂNG NHẬP");
-            }
+            } catch (e) { alert("Lỗi kết nối máy chủ!"); $('#btnLogin').prop('disabled', false); }
         }
 
-        function logout() {
-            localStorage.removeItem('is_thanhtra_logged_in');
-            localStorage.removeItem('tt_name');
-            location.reload();
-        }
+        function logout() { localStorage.clear(); location.reload(); }
 
         function showDashboard() {
             $('#loginWrapper').addClass('d-none');
@@ -326,11 +321,10 @@
         function initYearFilter() {
             const currentYear = new Date().getFullYear();
             const selYear = document.getElementById('selYear');
-            selYear.innerHTML = '';
             for (let i = 0; i <= 3; i++) {
                 let y = currentYear - i;
                 let opt = document.createElement('option');
-                opt.value = y; opt.text = y + (i === 0 ? " (Năm hiện tại)" : "");
+                opt.value = y; opt.text = y + (i === 0 ? " (Hiện tại)" : "");
                 selYear.appendChild(opt);
             }
             selYear.value = currentYear;
@@ -345,7 +339,7 @@
                     applyFilters();
                     $('#loadingOverlay').fadeOut();
                 }
-            } catch (e) { alert("Lỗi tải dữ liệu báo cáo!"); $('#loadingOverlay').fadeOut(); }
+            } catch (e) { alert("Lỗi tải dữ liệu!"); }
         }
 
         function applyFilters() {
@@ -371,24 +365,20 @@
                 if (status === 'fraud' && !row.isFraud) return false;
                 return true;
             });
-
             updateUI(filtered);
         }
 
         function updateUI(data) {
             let totalMins = 0; let fraudCount = 0; let gvs = new Set(); let rooms = {};
-
             data.forEach(r => {
                 totalMins += r.duration; gvs.add(r.giaoVien);
                 if (r.isFraud) fraudCount++;
                 rooms[r.phong] = (rooms[r.phong] || 0) + r.duration;
             });
-
             $('#kpiTotal').text(data.length);
             $('#kpiHours').text(totalMins.toLocaleString());
             $('#kpiTeachers').text(gvs.size);
             $('#kpiFraud').text(fraudCount);
-
             renderRoomChart(rooms);
             renderFraudChart(data.length - fraudCount, fraudCount);
             renderTable(data);
@@ -412,11 +402,31 @@
             if (table) table.destroy();
             $('#tblDetail tbody').empty();
             data.forEach(r => {
-                const st = r.isFraud ? '<span class="badge bg-danger">Vi phạm</span>' : '<span class="badge bg-success">Hợp lệ</span>';
-                const errors = [r.fraudIn, r.fraudOut].filter(x => x).join(' | ');
-                $('#tblDetail tbody').append(`<tr><td>${r.scanDate}</td><td class="fw-bold">${r.giaoVien}</td><td>${r.lop}</td><td>${r.phong}</td><td>${r.timeIn} - ${r.timeOut || '--'}</td><td class="text-center">${r.duration}</td><td class="text-center">${st}</td><td class="small text-danger">${errors}</td></tr>`);
+                const st = r.isFraud ? 'Vi phạm' : 'Hợp lệ';
+                const badge = r.isFraud ? 'bg-danger' : 'bg-success';
+                $('#tblDetail tbody').append(`<tr>
+                    <td>${r.scanDate}</td><td class="fw-bold">${r.giaoVien}</td><td>${r.lop}</td><td>${r.phong}</td>
+                    <td>${r.timeIn} - ${r.timeOut || '--'}</td><td>${r.duration}</td>
+                    <td><span class="badge ${badge}">${st}</span></td><td class="small text-danger">${[r.fraudIn, r.fraudOut].filter(x => x).join(' | ')}</td>
+                </tr>`);
             });
-            table = $('#tblDetail').DataTable({ language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" }, order: [[0, "desc"]] });
+
+            table = $('#tblDetail').DataTable({
+                language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
+                order: [[0, "desc"]],
+                dom: 'Bfrtip', // B là vị trí đặt các nút
+                buttons: [
+                    {
+                        extend: 'excelHtml5',
+                        text: '<i class="fa-solid fa-file-excel"></i> Xuất file Excel',
+                        className: 'btn btn-success btn-sm mb-3',
+                        title: 'Báo cáo điểm danh giảng viên - DNCC',
+                        exportOptions: {
+                            columns: [0, 1, 2, 3, 4, 5, 6, 7] // Xuất tất cả các cột
+                        }
+                    }
+                ]
+            });
         }
 
         function resetFilters() {
