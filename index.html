@@ -155,7 +155,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo quý:</label>
                         <select id="selQuarter" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả Quý --</option>
+                            <option value="">-- Tất cả quý --</option>
                             <option value="Q1">Quý 1</option>
                             <option value="Q2">Quý 2</option>
                             <option value="Q3">Quý 3</option>
@@ -165,7 +165,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo tháng:</label>
                         <select id="selMonth" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả Tháng --</option>
+                            <option value="">-- Tất cả tháng --</option>
                             <script>for (let i = 1; i <= 12; i++) document.write(`<option value="${i}">Tháng ${i}</option>`)</script>
                         </select>
                     </div>
@@ -284,7 +284,7 @@
 
         $(document).ready(function () {
             if (localStorage.getItem('is_thanhtra_logged_in') === 'true') {
-                $('#txtWelcome').text("Chào, " + localStorage.getItem('tt_name'));
+                $('#txtWelcome').text(localStorage.getItem('tt_name'));
                 showDashboard();
             }
         });
