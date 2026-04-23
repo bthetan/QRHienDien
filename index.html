@@ -156,7 +156,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo quý:</label>
                         <select id="selQuarter" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả Quý --</option>
+                            <option value="">-- Tất cả quý --</option>
                             <option value="Q1">Quý 1</option>
                             <option value="Q2">Quý 2</option>
                             <option value="Q3">Quý 3</option>
@@ -166,7 +166,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo tháng:</label>
                         <select id="selMonth" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả Tháng --</option>
+                            <option value="">-- Tất cả tháng --</option>
                             <script>for (let i = 1; i <= 12; i++) document.write(`<option value="${i}">Tháng ${i}</option>`)</script>
                         </select>
                     </div>
@@ -185,9 +185,9 @@
             </div>
 
             <ul class="nav nav-tabs mb-4" id="reportTabs">
-                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#overview">Tổng quan báo cáo</a></li>
-                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#details">Danh sách chi tiết</a></li>
-                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#lecturerReport">Thống kê Giảng viên & Tuân thủ</a></li>
+                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#overview">TỔNG QUAN</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#details">DANH SÁCH CHI TIẾT</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#lecturerReport">DANH SÁCH GIẢNG VIÊN</a></li>
             </ul>
 
             <div class="tab-content">
@@ -238,13 +238,13 @@
                     <div class="row g-4">
                         <div class="col-md-7">
                             <div class="card p-4 border-0 shadow-sm h-100">
-                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie me-2 text-danger"></i> Phân tích nhóm lỗi vi phạm phổ biến</h5>
+                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie me-2 text-danger"></i> Nhóm lỗi vi phạm phổ biến</h5>
                                 <div style="height: 350px;"><canvas id="violationReasonChart"></canvas></div>
                             </div>
                         </div>
                         <div class="col-md-5">
                             <div class="card p-4 border-0 shadow-sm h-100">
-                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-layer-group me-2 text-warning"></i> Phân bổ lớp ghép theo Môn học</h5>
+                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-layer-group me-2 text-warning"></i> Phân bổ lớp ghép theo môn học</h5>
                                 <div style="height: 350px; display: flex; align-items: center;"><canvas id="lopGhepChart"></canvas></div>
                             </div>
                         </div>
@@ -286,7 +286,7 @@
 
                 <div class="tab-pane fade" id="lecturerReport">
                     <div class="card p-4 border-0 shadow-sm">
-                        <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-users-viewfinder me-2"></i> Báo cáo hoạt động & Tuân thủ theo Giảng viên</h5>
+                        <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-users-viewfinder me-2"></i> Báo cáo hoạt động theo Giảng viên</h5>
                         <p class="text-muted small mb-3"><i>Nhấn vào con số ở cột Ca hợp lệ / Ca vi phạm để xem danh sách chi tiết.</i></p>
                         <div class="table-responsive">
                             <table id="tblLecturer" class="table table-hover table-bordered w-100 text-center align-middle">
@@ -365,12 +365,12 @@
 
         $(document).ready(function () {
             if (localStorage.getItem('is_thanhtra_logged_in') === 'true') {
-                $('#txtWelcome').text("Chào, " + localStorage.getItem('tt_name'));
+                $('#txtWelcome').text(localStorage.getItem('tt_name'));
                 showDashboard();
             }
         });
 
-        // KHÔI PHỤC HÀM LOGIN GỐC CHÍNH XÁC NHƯ CỦA BẠN
+        // HÀM LOGIN
         async function processLogin() {
             const email = $('#txtEmail').val().trim();
             const pin = $('#txtPin').val().trim();
@@ -641,7 +641,7 @@
                         extend: 'excelHtml5', 
                         text: '<i class="fa-solid fa-file-excel"></i> Xuất dữ liệu', 
                         className: 'btn btn-success btn-sm mb-3', 
-                        title: 'Chi tiết điểm danh giảng viên - DNCC', 
+                        title: 'Chi tiết hiện diện giảng viên - DNCC', 
                         exportOptions: { 
                             columns: [0, 1, 2, 3, 4, 5, 6, 7, 8],
                             modifier: { page: 'all', search: 'applied' } 
@@ -684,9 +684,9 @@
                 buttons: [
                     { 
                         extend: 'excelHtml5', 
-                        text: '<i class="fa-solid fa-file-excel"></i> Xuất Báo cáo', 
-                        className: 'btn btn-primary btn-sm mb-3', 
-                        title: 'Báo cáo Hoạt động & Tuân thủ theo Giảng viên - DNCC',
+                        text: '<i class="fa-solid fa-file-excel"></i> Xuất dữ liệu', 
+                        className: 'btn btn-success btn-sm mb-3',
+                        title: 'Báo cáo hoạt động theo Giảng viên - DNCC',
                         exportOptions: { 
                             modifier: { page: 'all', search: 'applied' } 
                         }
