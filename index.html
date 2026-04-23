@@ -15,7 +15,6 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
-        /* GIAO DIỆN ĐĂNG NHẬP */
         #loginWrapper {
             height: 100vh;
             display: flex;
@@ -33,7 +32,6 @@
             max-width: 400px;
         }
 
-        /* GIAO DIỆN DASHBOARD */
         .dashboard-header {
             background: #fff;
             padding: 20px;
@@ -82,7 +80,6 @@
             background: none;
         }
 
-        /* KHÔI PHỤC CSS LOADING GỐC CỦA BẠN */
         #loadingOverlay {
             position: fixed;
             top: 0;
@@ -370,7 +367,6 @@
             }
         });
 
-        // HÀM LOGIN
         async function processLogin() {
             const email = $('#txtEmail').val().trim();
             const pin = $('#txtPin').val().trim();
@@ -392,7 +388,6 @@
 
         function logout() { localStorage.clear(); location.reload(); }
 
-        // SỬ DỤNG HÀM HIỂN THỊ GỐC (Tránh lỗi DOM CSS)
         function showDashboard() {
             $('#loginWrapper').addClass('d-none');
             $('#dashboardWrapper').removeClass('d-none');
@@ -413,7 +408,6 @@
             selYear.value = currentYear;
         }
 
-        // SỬ DỤNG HÀM TẢI GỐC (fadeOut)
         async function loadData() {
             try {
                 const response = await fetch(API_URL);
@@ -480,7 +474,6 @@
                 gvStats[r.giaoVien].classes.add(r.lop);
                 gvStats[r.giaoVien].total++;
 
-                // Thuật toán chuẩn hóa 6 nhóm lỗi
                 if (r.isFraud) {
                     fraudCount++;
                     gvStats[r.giaoVien].fraud++;
