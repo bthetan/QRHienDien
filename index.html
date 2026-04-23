@@ -85,12 +85,21 @@
         #loadingOverlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: #fff; z-index: 9999;
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            display: none;
+            background: rgba(255, 255, 255, 0.9); z-index: 9999;
+            flex-direction: column; justify-content: center; align-items: center;
         }
 
         .dt-buttons { margin-bottom: 15px; }
+
+        /* Tinh chỉnh Link Click trong bảng */
+        .clickable-number {
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+        .clickable-number:hover {
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body>
@@ -113,9 +122,9 @@
         </div>
     </div>
 
-    <div id="loadingOverlay">
+    <div id="loadingOverlay" class="d-none">
         <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
-        <h5 class="mt-3">Đang xử lý dữ liệu báo cáo...</h5>
+        <h5 class="mt-3 fw-bold text-secondary">Đang xử lý dữ liệu báo cáo...</h5>
     </div>
 
     <div id="dashboardWrapper" class="d-none">
@@ -168,7 +177,7 @@
             <ul class="nav nav-tabs mb-4" id="reportTabs">
                 <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#overview">Tổng quan báo cáo</a></li>
                 <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#details">Danh sách chi tiết</a></li>
-                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#lecturerReport">Thống kê Giảng viên & Vi phạm</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#lecturerReport">Thống kê Giảng viên & Tuân thủ</a></li>
             </ul>
 
             <div class="tab-content">
@@ -201,7 +210,7 @@
                         </div>
                     </div>
 
-                    <div class="row g-4">
+                    <div class="row g-4 mb-4">
                         <div class="col-md-8">
                             <div class="card p-4 border-0 shadow-sm h-100">
                                 <h5 class="fw-bold mb-3"><i class="fa-solid fa-hotel me-2 text-primary"></i> Hiệu suất sử dụng phòng học (Tổng số giờ)</h5>
@@ -212,6 +221,15 @@
                             <div class="card p-4 border-0 shadow-sm h-100">
                                 <h5 class="fw-bold mb-3 text-center">Tỷ lệ tuân thủ thời gian</h5>
                                 <div style="height: 350px; display: flex; align-items: center;"><canvas id="fraudChart"></canvas></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-4">
+                        <div class="col-md-12">
+                            <div class="card p-4 border-0 shadow-sm h-100">
+                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie me-2 text-danger"></i> Phân tích nhóm lỗi vi phạm phổ biến</h5>
+                                <div style="height: 350px;"><canvas id="violationReasonChart"></canvas></div>
                             </div>
                         </div>
                     </div>
@@ -251,16 +269,9 @@
                 </div>
 
                 <div class="tab-pane fade" id="lecturerReport">
-                    <div class="row g-4 mb-4">
-                        <div class="col-md-12">
-                            <div class="card p-4 border-0 shadow-sm h-100">
-                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie me-2 text-danger"></i> Phân tích nhóm lỗi vi phạm phổ biến</h5>
-                                <div style="height: 350px;"><canvas id="violationReasonChart"></canvas></div>
-                            </div>
-                        </div>
-                    </div>
                     <div class="card p-4 border-0 shadow-sm">
                         <h5 class="fw-bold mb-3 text-primary"><i class="fa-solid fa-users-viewfinder me-2"></i> Báo cáo hoạt động & Tuân thủ theo Giảng viên</h5>
+                        <p class="text-muted small mb-3"><i>Nhấn vào con số ở cột Ca hợp lệ / Ca vi phạm để xem danh sách chi tiết.</i></p>
                         <div class="table-responsive">
                             <table id="tblLecturer" class="table table-hover table-bordered w-100 text-center align-middle">
                                 <thead class="table-light">
@@ -279,10 +290,39 @@
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
         <br /><p class="text-center text-muted small">Hỗ trợ kỹ thuật: Bùi Thế Tân - 0876774567</p>
+    </div>
+
+    <div class="modal fade" id="gvDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-primary" id="gvDetailModalTitle">Chi tiết ca dạy</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table id="tblModalDetail" class="table table-hover table-bordered w-100">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Lớp học</th>
+                                    <th>Lớp ghép</th>
+                                    <th>Phòng học</th>
+                                    <th>Vào - Ra</th>
+                                    <th>Phút</th>
+                                    <th>Trạng thái</th>
+                                    <th>Chi tiết lỗi</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -301,7 +341,9 @@
         const API_URL = "https://hien-dien-qr.b-thetan.workers.dev/";
 
         let allData = []; 
-        let table = null; let tableLecturer = null;
+        let currentFilteredData = []; // Biến lưu trữ dữ liệu đã qua bộ lọc hiện tại
+        
+        let table = null; let tableLecturer = null; let tableModal = null;
         let roomChart = null; let fraudChart = null; let violationReasonChart = null;
 
         $(document).ready(function () {
@@ -335,7 +377,10 @@
         function showDashboard() {
             $('#loginWrapper').addClass('d-none');
             $('#dashboardWrapper').removeClass('d-none');
-            $('#loadingOverlay').show();
+            
+            // Hiện loading (sử dụng class d-flex để giữ nguyên định dạng)
+            $('#loadingOverlay').removeClass('d-none').addClass('d-flex');
+            
             initYearFilter();
             loadData();
         }
@@ -359,7 +404,9 @@
                 if (json.status === "success") {
                     allData = json.data;
                     applyFilters();
-                    $('#loadingOverlay').fadeOut();
+                    
+                    // Ẩn loading mượt mà
+                    $('#loadingOverlay').removeClass('d-flex').addClass('d-none');
                 }
             } catch (e) { alert("Lỗi tải dữ liệu!"); }
         }
@@ -387,6 +434,8 @@
                 if (status === 'fraud' && !row.isFraud) return false;
                 return true;
             });
+            
+            currentFilteredData = filtered; // Lưu lại để dùng cho tính năng Click xem chi tiết
             updateUI(filtered);
         }
 
@@ -394,7 +443,6 @@
             let totalMins = 0; let fraudCount = 0; let gvs = new Set(); let rooms = {};
             let lopGhepCount = 0; 
             
-            // Các biến cho Tab Báo cáo Giảng viên & Vi phạm
             let gvStats = {}; 
             let vStats = {};
 
@@ -402,12 +450,10 @@
                 totalMins += r.duration; gvs.add(r.giaoVien);
                 rooms[r.phong] = (rooms[r.phong] || 0) + r.duration;
 
-                // Cập nhật lớp ghép
                 if (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True') {
                     lopGhepCount++;
                 }
 
-                // KHỞI TẠO DỮ LIỆU GIẢNG VIÊN
                 if (!gvStats[r.giaoVien]) {
                     gvStats[r.giaoVien] = { name: r.giaoVien, hours: 0, classes: new Set(), total: 0, valid: 0, fraud: 0 };
                 }
@@ -415,18 +461,14 @@
                 gvStats[r.giaoVien].classes.add(r.lop);
                 gvStats[r.giaoVien].total++;
 
-                // PHÂN TÍCH VI PHẠM
                 if (r.isFraud) {
                     fraudCount++;
                     gvStats[r.giaoVien].fraud++;
 
-                    // Bóc tách lý do vi phạm (Gộp FraudIn và FraudOut)
                     let combinedReasons = [r.fraudIn, r.fraudOut].filter(x => x).join(' | ');
                     if(combinedReasons) {
-                        // Tách các lỗi phân cách bởi dấu | hoặc ;
                         let parts = combinedReasons.split(/\||;/).map(x => x.trim().replace(/(Vào: |Ra: )/g, '')).filter(x => x);
                         parts.forEach(p => {
-                            // Rút gọn các lỗi có chứa m (ví dụ: Ngoài phạm vi 3225m -> Ngoài phạm vi) để gom nhóm biểu đồ
                             let cleanReason = p.replace(/\(\d+m\)/g, '(...)').trim();
                             vStats[cleanReason] = (vStats[cleanReason] || 0) + 1;
                         });
@@ -436,26 +478,20 @@
                 }
             });
 
-            // Ghi dữ liệu vào KPI
             $('#kpiTotal').text(data.length);
             $('#kpiHours').text(totalMins.toLocaleString());
             $('#kpiTeachers').text(gvs.size);
             $('#kpiFraud').text(fraudCount);
             $('#kpiLopGhep').text(lopGhepCount);
 
-            // Render biểu đồ tổng quan
             renderRoomChart(rooms);
             renderFraudChart(data.length - fraudCount, fraudCount);
-            
-            // Render bảng chi tiết
             renderTable(data);
-
-            // Render dữ liệu cho Tab Mới
-            renderLecturerTable(gvStats);
+            
             renderViolationReasonChart(vStats);
+            renderLecturerTable(gvStats);
         }
 
-        // --- CÁC HÀM RENDER TỒN TẠI ---
         function renderRoomChart(roomData) {
             const ctx = document.getElementById('roomChart').getContext('2d');
             const labels = Object.keys(roomData).sort((a, b) => roomData[b] - roomData[a]).slice(0, 5);
@@ -468,6 +504,28 @@
             const ctx = document.getElementById('fraudChart').getContext('2d');
             if (fraudChart) fraudChart.destroy();
             fraudChart = new Chart(ctx, { type: 'doughnut', data: { labels: ['Hợp lệ', 'Vi phạm'], datasets: [{ data: [v, f], backgroundColor: ['#2ecc71', '#e74c3c'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } } });
+        }
+
+        function renderViolationReasonChart(vData) {
+            const ctx = document.getElementById('violationReasonChart').getContext('2d');
+            const labels = Object.keys(vData).sort((a, b) => vData[b] - vData[a]);
+            const values = labels.map(l => vData[l]);
+            
+            if (violationReasonChart) violationReasonChart.destroy();
+            violationReasonChart = new Chart(ctx, { 
+                type: 'bar', 
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        label: 'Số lần ghi nhận', data: values, backgroundColor: 'rgba(231, 76, 60, 0.8)', borderColor: '#c0392b', borderWidth: 1, borderRadius: 4 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+                    plugins: { legend: { display: false } }
+                } 
+            });
         }
 
         function renderTable(data) {
@@ -494,27 +552,16 @@
 
             table = $('#tblDetail').DataTable({
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
-                order: [[0, "desc"]],
-                dom: 'Bfrtip', 
-                buttons: [
-                    {
-                        extend: 'excelHtml5',
-                        text: '<i class="fa-solid fa-file-excel"></i> Xuất dữ liệu Lịch sử',
-                        className: 'btn btn-success btn-sm mb-3',
-                        title: 'Chi tiết điểm danh giảng viên - DNCC',
-                        exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8] }
-                    }
-                ]
+                order: [[0, "desc"]], dom: 'Bfrtip', 
+                buttons: [{ extend: 'excelHtml5', text: '<i class="fa-solid fa-file-excel"></i> Xuất dữ liệu Lịch sử', className: 'btn btn-success btn-sm mb-3', title: 'Chi tiết điểm danh giảng viên - DNCC', exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8] } }]
             });
         }
 
-        // --- HÀM RENDER MỚI: BÁO CÁO GIẢNG VIÊN ---
         function renderLecturerTable(gvData) {
             if (tableLecturer) tableLecturer.destroy();
             $('#tblLecturer tbody').empty();
             
             Object.values(gvData).forEach(gv => {
-                // Tính tỷ lệ tuân thủ
                 let rate = gv.total > 0 ? Math.round((gv.valid / gv.total) * 100) : 0;
                 let badgeClass = rate >= 90 ? 'bg-success' : (rate >= 70 ? 'bg-warning text-dark' : 'bg-danger');
                 
@@ -523,59 +570,66 @@
                     <td>${gv.hours.toLocaleString()}</td>
                     <td>${gv.classes.size}</td>
                     <td class="fw-bold">${gv.total}</td>
-                    <td class="text-success fw-bold">${gv.valid}</td>
-                    <td class="text-danger fw-bold">${gv.fraud}</td>
+                    
+                    <td class="text-success fw-bold">
+                        <a class="clickable-number text-success" onclick="openDetailModal('${gv.name}', false)">${gv.valid}</a>
+                    </td>
+                    <td class="text-danger fw-bold">
+                        <a class="clickable-number text-danger" onclick="openDetailModal('${gv.name}', true)">${gv.fraud}</a>
+                    </td>
+
                     <td><h5><span class="badge ${badgeClass}">${rate}%</span></h5></td>
                 </tr>`);
             });
 
             tableLecturer = $('#tblLecturer').DataTable({
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
-                order: [[6, "asc"]], // Mặc định sắp xếp các giảng viên tuân thủ thấp lên đầu
+                order: [[6, "asc"]],
                 dom: 'Bfrtip',
-                buttons: [
-                    {
-                        extend: 'excelHtml5',
-                        text: '<i class="fa-solid fa-file-excel"></i> Xuất Báo cáo Giảng viên',
-                        className: 'btn btn-primary btn-sm mb-3',
-                        title: 'Báo cáo Hoạt động & Tuân thủ theo Giảng viên - DNCC'
-                    }
-                ]
+                buttons: [{ extend: 'excelHtml5', text: '<i class="fa-solid fa-file-excel"></i> Xuất Báo cáo Giảng viên', className: 'btn btn-primary btn-sm mb-3', title: 'Báo cáo Hoạt động & Tuân thủ theo Giảng viên - DNCC' }]
             });
         }
 
-        // --- HÀM RENDER MỚI: BIỂU ĐỒ LOẠI LỖI VI PHẠM ---
-        function renderViolationReasonChart(vData) {
-            const ctx = document.getElementById('violationReasonChart').getContext('2d');
-            // Sắp xếp các lỗi theo số lượng giảm dần
-            const labels = Object.keys(vData).sort((a, b) => vData[b] - vData[a]);
-            const values = labels.map(l => vData[l]);
-            
-            if (violationReasonChart) violationReasonChart.destroy();
-            violationReasonChart = new Chart(ctx, { 
-                type: 'bar', 
-                data: { 
-                    labels: labels, 
-                    datasets: [{ 
-                        label: 'Số lần ghi nhận', 
-                        data: values, 
-                        backgroundColor: 'rgba(231, 76, 60, 0.8)', 
-                        borderColor: '#c0392b',
-                        borderWidth: 1,
-                        borderRadius: 4 
-                    }] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                    },
-                    plugins: { 
-                        legend: { display: false } 
-                    }
-                } 
+        // HÀM MỞ MODAL XEM CHI TIẾT
+        function openDetailModal(teacherName, isFraudTarget) {
+            // Lọc dữ liệu dựa trên biến currentFilteredData đã áp dụng bộ lọc ngày/tháng
+            let targetData = currentFilteredData.filter(r => r.giaoVien === teacherName && r.isFraud === isFraudTarget);
+
+            if (tableModal) tableModal.destroy();
+            $('#tblModalDetail tbody').empty();
+
+            targetData.forEach(r => {
+                const st = r.isFraud ? 'Vi phạm' : 'Hợp lệ';
+                const badge = r.isFraud ? 'bg-danger' : 'bg-success';
+                const isGhep = (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True');
+                const ghepHtml = isGhep ? '<span class="badge bg-warning text-dark"><i class="fa-solid fa-layer-group"></i> Có</span>' : '';
+
+                $('#tblModalDetail tbody').append(`<tr>
+                    <td>${r.scanDate}</td>
+                    <td>${r.lop}</td>
+                    <td class="text-center">${ghepHtml}</td>
+                    <td>${r.phong}</td>
+                    <td>${r.timeIn} - ${r.timeOut || '--'}</td>
+                    <td>${r.duration}</td>
+                    <td><span class="badge ${badge}">${st}</span></td>
+                    <td class="small text-danger">${[r.fraudIn, r.fraudOut].filter(x => x).join(' | ')}</td>
+                </tr>`);
             });
+
+            // Cập nhật tiêu đề modal
+            let titleText = isFraudTarget ? `Danh sách Ca Vi Phạm - Giảng viên: ${teacherName}` : `Danh sách Ca Hợp Lệ - Giảng viên: ${teacherName}`;
+            let titleColor = isFraudTarget ? 'text-danger' : 'text-success';
+            $('#gvDetailModalTitle').removeClass('text-primary text-danger text-success').addClass(titleColor).text(titleText);
+
+            tableModal = $('#tblModalDetail').DataTable({
+                language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
+                order: [[0, "desc"]],
+                pageLength: 10,
+                lengthChange: false
+            });
+
+            // Hiển thị Modal
+            new bootstrap.Modal(document.getElementById('gvDetailModal')).show();
         }
 
         function resetFilters() {
