@@ -89,7 +89,7 @@
             flex-direction: column; justify-content: center; align-items: center;
         }
 
-        .dt-buttons { margin-bottom: 15px; }
+        .dt-buttons { margin-bottom: 0px; } /* Reset margin cho nút vì đã dùng grid row */
 
         .clickable-number {
             cursor: pointer;
@@ -350,7 +350,7 @@
         
         let table = null; let tableLecturer = null; let tableModal = null;
         let roomChart = null; let fraudChart = null; let violationReasonChart = null; 
-        let lopGhepChart = null; // Biến cho biểu đồ Lớp ghép
+        let lopGhepChart = null; 
 
         $(document).ready(function () {
             if (localStorage.getItem('is_thanhtra_logged_in') === 'true') {
@@ -446,17 +446,15 @@
             
             let gvStats = {}; 
             let vStats = {};
-            let lgStats = {}; // Biến thống kê Lớp ghép theo Môn
+            let lgStats = {}; 
 
             data.forEach(r => {
                 totalMins += r.duration; gvs.add(r.giaoVien);
                 rooms[r.phong] = (rooms[r.phong] || 0) + r.duration;
 
-                // Xử lý thống kê Lớp ghép
                 let isGhep = (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True');
                 if (isGhep) {
                     lopGhepCount++;
-                    // Lấy tên môn học (nếu có) hoặc đặt là "Khác"
                     let monName = r.mon || r.Mon || r.monHoc || r.tenMon || 'Chưa xác định';
                     lgStats[monName] = (lgStats[monName] || 0) + 1;
                 }
@@ -494,7 +492,7 @@
             renderRoomChart(rooms);
             renderFraudChart(data.length - fraudCount, fraudCount);
             renderViolationReasonChart(vStats);
-            renderLopGhepChart(lgStats); // Gọi render biểu đồ Lớp ghép
+            renderLopGhepChart(lgStats); 
 
             renderTable(data);
             renderLecturerTable(gvStats);
@@ -536,16 +534,13 @@
             });
         }
 
-        // HÀM RENDER BIỂU ĐỒ LỚP GHÉP
         function renderLopGhepChart(lgData) {
             const ctx = document.getElementById('lopGhepChart').getContext('2d');
             
-            // Sắp xếp môn học có lớp ghép nhiều nhất
             let sortedKeys = Object.keys(lgData).sort((a, b) => lgData[b] - lgData[a]);
             let labels = [];
             let values = [];
             
-            // Lấy Top 5 môn ghép nhiều nhất, còn lại gom vào "Các môn khác"
             if (sortedKeys.length > 5) {
                 labels = sortedKeys.slice(0, 5);
                 values = labels.map(l => lgData[l]);
@@ -557,7 +552,6 @@
                 values = labels.map(l => lgData[l]);
             }
 
-            // Xử lý trường hợp không có dữ liệu lớp ghép
             if(labels.length === 0) {
                 labels = ['Chưa có dữ liệu'];
                 values = [1];
@@ -608,8 +602,23 @@
 
             table = $('#tblDetail').DataTable({
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
-                order: [[0, "desc"]], dom: 'Bfrtip', 
-                buttons: [{ extend: 'excelHtml5', text: '<i class="fa-solid fa-file-excel"></i> Xuất dữ liệu Lịch sử', className: 'btn btn-success btn-sm mb-3', title: 'Chi tiết điểm danh giảng viên - DNCC', exportOptions: { columns: [0, 1, 2, 3, 4, 5, 6, 7, 8] } }]
+                order: [[0, "desc"]], 
+                lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "Tất cả"]],
+                dom: "<'row mb-3 align-items-center'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4 text-center'B><'col-sm-12 col-md-4'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                buttons: [
+                    { 
+                        extend: 'excelHtml5', 
+                        text: '<i class="fa-solid fa-file-excel"></i> Xuất dữ liệu', 
+                        className: 'btn btn-success btn-sm', 
+                        title: 'Chi tiết điểm danh giảng viên - DNCC', 
+                        exportOptions: { 
+                            columns: [0, 1, 2, 3, 4, 5, 6, 7, 8],
+                            modifier: { page: 'all', search: 'applied' } // Xuất tất cả các dòng đã lọc, không theo phân trang hiển thị
+                        } 
+                    }
+                ]
             });
         }
 
@@ -639,8 +648,21 @@
             tableLecturer = $('#tblLecturer').DataTable({
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
                 order: [[6, "asc"]],
-                dom: 'Bfrtip',
-                buttons: [{ extend: 'excelHtml5', text: '<i class="fa-solid fa-file-excel"></i> Xuất Báo cáo Giảng viên', className: 'btn btn-primary btn-sm mb-3', title: 'Báo cáo Hoạt động & Tuân thủ theo Giảng viên - DNCC' }]
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Tất cả"]],
+                dom: "<'row mb-3 align-items-center'<'col-sm-12 col-md-4'l><'col-sm-12 col-md-4 text-center'B><'col-sm-12 col-md-4'f>>" +
+                     "<'row'<'col-sm-12'tr>>" +
+                     "<'row mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
+                buttons: [
+                    { 
+                        extend: 'excelHtml5', 
+                        text: '<i class="fa-solid fa-file-excel"></i> Xuất Báo cáo', 
+                        className: 'btn btn-primary btn-sm', 
+                        title: 'Báo cáo Hoạt động & Tuân thủ theo Giảng viên - DNCC',
+                        exportOptions: { 
+                            modifier: { page: 'all', search: 'applied' } // Xuất toàn bộ dữ liệu trên các trang
+                        }
+                    }
+                ]
             });
         }
 
@@ -674,7 +696,10 @@
 
             tableModal = $('#tblModalDetail').DataTable({
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
-                order: [[0, "desc"]], pageLength: 10, lengthChange: false
+                order: [[0, "desc"]], 
+                pageLength: 10, 
+                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Tất cả"]],
+                lengthChange: true // Đã bật chức năng cho phép thay đổi số dòng phân trang
             });
 
             new bootstrap.Modal(document.getElementById('gvDetailModal')).show();
