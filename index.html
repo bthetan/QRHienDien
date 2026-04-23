@@ -15,6 +15,7 @@
             font-family: 'Segoe UI', sans-serif;
         }
 
+        /* GIAO DIỆN ĐĂNG NHẬP */
         #loginWrapper {
             height: 100vh;
             display: flex;
@@ -32,6 +33,7 @@
             max-width: 400px;
         }
 
+        /* GIAO DIỆN DASHBOARD */
         .dashboard-header {
             background: #fff;
             padding: 20px;
@@ -67,6 +69,11 @@
 
         .bg-red {
             background: linear-gradient(45deg, #cb2d3e, #ef473a);
+        }
+        
+        /* Bổ sung màu cho thẻ KPI Lớp ghép */
+        .bg-purple {
+            background: linear-gradient(45deg, #8e44ad, #9b59b6);
         }
 
         .filter-section {
@@ -154,7 +161,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo quý:</label>
                         <select id="selQuarter" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả quý --</option>
+                            <option value="">-- Tất cả Quý --</option>
                             <option value="Q1">Quý 1</option>
                             <option value="Q2">Quý 2</option>
                             <option value="Q3">Quý 3</option>
@@ -164,7 +171,7 @@
                     <div class="col-md-2">
                         <label class="form-label fw-bold small text-muted">Lọc theo tháng:</label>
                         <select id="selMonth" class="form-select" onchange="applyFilters()">
-                            <option value="">-- Tất cả tháng --</option>
+                            <option value="">-- Tất cả Tháng --</option>
                             <script>for (let i = 1; i <= 12; i++) document.write(`<option value="${i}">Tháng ${i}</option>`)</script>
                         </select>
                     </div>
@@ -190,22 +197,27 @@
             <div class="tab-content">
                 <div class="tab-pane fade show active" id="overview">
                     <div class="row g-3 mb-4">
-                        <div class="col-md-3">
+                        <div class="col-12 col-md">
                             <div class="card card-kpi bg-blue p-3">
                                 <p class="mb-1 small">Tổng số ca dạy</p><h3 id="kpiTotal">0</h3>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-12 col-md">
                             <div class="card card-kpi bg-green p-3">
                                 <p class="mb-1 small">Tổng giờ thực dạy (Phút)</p><h3 id="kpiHours">0</h3>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-12 col-md">
                             <div class="card card-kpi bg-orange p-3">
                                 <p class="mb-1 small">Giảng viên hoạt động</p><h3 id="kpiTeachers">0</h3>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-12 col-md">
+                            <div class="card card-kpi bg-purple p-3">
+                                <p class="mb-1 small">Số ca lớp ghép</p><h3 id="kpiLopGhep">0</h3>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md">
                             <div class="card card-kpi bg-red p-3">
                                 <p class="mb-1 small">Số ca vi phạm</p><h3 id="kpiFraud">0</h3>
                             </div>
@@ -247,6 +259,7 @@
                                         <th>Ngày</th>
                                         <th>Giảng viên</th>
                                         <th>Lớp học</th>
+                                        <th>Lớp ghép</th> 
                                         <th>Phòng học</th>
                                         <th>Vào - Ra</th>
                                         <th>Phút</th>
@@ -276,14 +289,14 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
-        const AUTH_URL = "https://script.google.com/macros/s/AKfycbzgbkaBhHX05HUd-JJ01w-HrbX_VWmyWkfEolUrOtgRGRXVoE6PKrPT6pGIoBpSa7_2/exec"; 
-        const API_URL = "https://hien-dien-qr.b-thetan.workers.dev/";     
+        const AUTH_URL = "https://script.google.com/macros/s/AKfycbzgbkaBhHX05HUd-JJ01w-HrbX_VWmyWkfEolUrOtgRGRXVoE6PKrPT6pGIoBpSa7_2/exec"; // Link đuôi /exec để xác thực đăng nhập (Không dùng qua Cloudflare để tránh lỗi bộ đệm)
+        const API_URL = "https://hien-dien-qr.b-thetan.workers.dev/";      // Link Worker đuôi .workers.dev để tải dữ liệu báo cáo cực nhanh
 
         let allData = []; let table = null; let roomChart = null; let fraudChart = null;
 
         $(document).ready(function () {
             if (localStorage.getItem('is_thanhtra_logged_in') === 'true') {
-                $('#txtWelcome').text(localStorage.getItem('tt_name'));
+                $('#txtWelcome').text("Chào, " + localStorage.getItem('tt_name'));
                 showDashboard();
             }
         });
@@ -369,15 +382,25 @@
 
         function updateUI(data) {
             let totalMins = 0; let fraudCount = 0; let gvs = new Set(); let rooms = {};
+            let lopGhepCount = 0; // BỔ SUNG: Biến đếm lớp ghép
+
             data.forEach(r => {
                 totalMins += r.duration; gvs.add(r.giaoVien);
                 if (r.isFraud) fraudCount++;
+                
+                // BỔ SUNG: Kiểm tra lớp ghép (hỗ trợ cả kiểu boolean và chuỗi)
+                if (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True') {
+                    lopGhepCount++;
+                }
+
                 rooms[r.phong] = (rooms[r.phong] || 0) + r.duration;
             });
             $('#kpiTotal').text(data.length);
             $('#kpiHours').text(totalMins.toLocaleString());
             $('#kpiTeachers').text(gvs.size);
             $('#kpiFraud').text(fraudCount);
+            $('#kpiLopGhep').text(lopGhepCount); // BỔ SUNG: Hiển thị số lượng lớp ghép
+
             renderRoomChart(rooms);
             renderFraudChart(data.length - fraudCount, fraudCount);
             renderTable(data);
@@ -403,17 +426,28 @@
             data.forEach(r => {
                 const st = r.isFraud ? 'Vi phạm' : 'Hợp lệ';
                 const badge = r.isFraud ? 'bg-danger' : 'bg-success';
+                
+                // BỔ SUNG: Xử lý hiển thị cột Lớp ghép
+                const isGhep = (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True');
+                const ghepHtml = isGhep ? '<span class="badge bg-warning text-dark"><i class="fa-solid fa-layer-group"></i> Có</span>' : '';
+
                 $('#tblDetail tbody').append(`<tr>
-                    <td>${r.scanDate}</td><td class="fw-bold">${r.giaoVien}</td><td>${r.lop}</td><td>${r.phong}</td>
-                    <td>${r.timeIn} - ${r.timeOut || '--'}</td><td>${r.duration}</td>
-                    <td><span class="badge ${badge}">${st}</span></td><td class="small text-danger">${[r.fraudIn, r.fraudOut].filter(x => x).join(' | ')}</td>
+                    <td>${r.scanDate}</td>
+                    <td class="fw-bold">${r.giaoVien}</td>
+                    <td>${r.lop}</td>
+                    <td class="text-center">${ghepHtml}</td> <td>${r.phong}</td>
+                    <td>${r.timeIn} - ${r.timeOut || '--'}</td>
+                    <td>${r.duration}</td>
+                    <td><span class="badge ${badge}">${st}</span></td>
+                    <td class="small text-danger">${[r.fraudIn, r.fraudOut].filter(x => x).join(' | ')}</td>
                 </tr>`);
             });
 
+            // KHỞI TẠO DATATABLE VỚI NÚT XUẤT EXCEL ĐÃ CẬP NHẬT CỘT MỚI
             table = $('#tblDetail').DataTable({
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
                 order: [[0, "desc"]],
-                dom: 'Bfrtip', // B là vị trí đặt các nút
+                dom: 'Bfrtip', 
                 buttons: [
                     {
                         extend: 'excelHtml5',
@@ -421,7 +455,7 @@
                         className: 'btn btn-success btn-sm mb-3',
                         title: 'Báo cáo điểm danh giảng viên - DNCC',
                         exportOptions: {
-                            columns: [0, 1, 2, 3, 4, 5, 6, 7] // Xuất tất cả các cột
+                            columns: [0, 1, 2, 3, 4, 5, 6, 7, 8] // Cập nhật xuất ra 9 cột (Thêm cột chỉ mục 3)
                         }
                     }
                 ]
