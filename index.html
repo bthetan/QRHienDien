@@ -89,7 +89,7 @@
             flex-direction: column; justify-content: center; align-items: center;
         }
 
-        .dt-buttons { margin-bottom: 0px; } /* Reset margin cho nút vì đã dùng grid row */
+        .dt-buttons { margin-bottom: 0px; }
 
         .clickable-number {
             cursor: pointer;
@@ -466,18 +466,36 @@
                 gvStats[r.giaoVien].classes.add(r.lop);
                 gvStats[r.giaoVien].total++;
 
+                // THUẬT TOÁN PHÂN LOẠI NHÓM LỖI
                 if (r.isFraud) {
                     fraudCount++;
                     gvStats[r.giaoVien].fraud++;
 
-                    let combinedReasons = [r.fraudIn, r.fraudOut].filter(x => x).join(' | ');
-                    if(combinedReasons) {
-                        let parts = combinedReasons.split(/\||;/).map(x => x.trim().replace(/(Vào: |Ra: )/g, '')).filter(x => x);
-                        parts.forEach(p => {
-                            let cleanReason = p.replace(/\(\d+m\)/g, '(...)').trim();
-                            vStats[cleanReason] = (vStats[cleanReason] || 0) + 1;
-                        });
-                    }
+                    let inParts = r.fraudIn ? r.fraudIn.split(/\||;/).map(x => x.trim()).filter(x => x) : [];
+                    let outParts = r.fraudOut ? r.fraudOut.split(/\||;/).map(x => x.trim()).filter(x => x) : [];
+
+                    // Hàm quy chuẩn lỗi về 6 nhóm cơ bản
+                    const getCategory = (p, type) => {
+                        let lowerP = p.toLowerCase();
+                        if (lowerP.includes("ngoài phạm vi")) return type === 'in' ? "Bắt đầu - Ngoài phạm vi" : "Kết thúc - Ngoài phạm vi";
+                        if (lowerP.includes("chưa đủ 120 phút") || lowerP.includes("chưa đủ")) return "Chưa đủ 120 phút";
+                        if (lowerP.includes("tự động đóng ca") || lowerP.includes("hệ thống") || lowerP.includes("quá hạn")) return "Hệ thống tự động đóng ca";
+                        if (lowerP.includes("thiết bị không nhất quán") || lowerP.includes("thiết bị")) return "Thiết bị không nhất quán";
+                        if (lowerP.includes("nhầm phòng") || lowerP.includes("sai phòng")) return "Kết thúc nhầm phòng";
+                        
+                        // Lỗi khác (nếu có)
+                        return p.replace(/(Vào: |Ra: )/gi, '').replace(/\(\d+m\)/g, '(...)').trim();
+                    };
+
+                    inParts.forEach(p => {
+                        let cat = getCategory(p, 'in');
+                        vStats[cat] = (vStats[cat] || 0) + 1;
+                    });
+
+                    outParts.forEach(p => {
+                        let cat = getCategory(p, 'out');
+                        vStats[cat] = (vStats[cat] || 0) + 1;
+                    });
                 } else {
                     gvStats[r.giaoVien].valid++;
                 }
@@ -615,7 +633,7 @@
                         title: 'Chi tiết điểm danh giảng viên - DNCC', 
                         exportOptions: { 
                             columns: [0, 1, 2, 3, 4, 5, 6, 7, 8],
-                            modifier: { page: 'all', search: 'applied' } // Xuất tất cả các dòng đã lọc, không theo phân trang hiển thị
+                            modifier: { page: 'all', search: 'applied' } 
                         } 
                     }
                 ]
@@ -659,57 +677,11 @@
                         className: 'btn btn-primary btn-sm', 
                         title: 'Báo cáo Hoạt động & Tuân thủ theo Giảng viên - DNCC',
                         exportOptions: { 
-                            modifier: { page: 'all', search: 'applied' } // Xuất toàn bộ dữ liệu trên các trang
+                            modifier: { page: 'all', search: 'applied' } 
                         }
                     }
                 ]
             });
         }
 
-        function openDetailModal(teacherName, isFraudTarget) {
-            let targetData = currentFilteredData.filter(r => r.giaoVien === teacherName && r.isFraud === isFraudTarget);
-
-            if (tableModal) tableModal.destroy();
-            $('#tblModalDetail tbody').empty();
-
-            targetData.forEach(r => {
-                const st = r.isFraud ? 'Vi phạm' : 'Hợp lệ';
-                const badge = r.isFraud ? 'bg-danger' : 'bg-success';
-                const isGhep = (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True');
-                const ghepHtml = isGhep ? '<span class="badge bg-warning text-dark"><i class="fa-solid fa-layer-group"></i> Có</span>' : '';
-
-                $('#tblModalDetail tbody').append(`<tr>
-                    <td>${r.scanDate}</td>
-                    <td>${r.lop}</td>
-                    <td class="text-center">${ghepHtml}</td>
-                    <td>${r.phong}</td>
-                    <td>${r.timeIn} - ${r.timeOut || '--'}</td>
-                    <td>${r.duration}</td>
-                    <td><span class="badge ${badge}">${st}</span></td>
-                    <td class="small text-danger">${[r.fraudIn, r.fraudOut].filter(x => x).join(' | ')}</td>
-                </tr>`);
-            });
-
-            let titleText = isFraudTarget ? `Danh sách Ca Vi Phạm - Giảng viên: ${teacherName}` : `Danh sách Ca Hợp Lệ - Giảng viên: ${teacherName}`;
-            let titleColor = isFraudTarget ? 'text-danger' : 'text-success';
-            $('#gvDetailModalTitle').removeClass('text-primary text-danger text-success').addClass(titleColor).text(titleText);
-
-            tableModal = $('#tblModalDetail').DataTable({
-                language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
-                order: [[0, "desc"]], 
-                pageLength: 10, 
-                lengthMenu: [[10, 25, 50, -1], [10, 25, 50, "Tất cả"]],
-                lengthChange: true // Đã bật chức năng cho phép thay đổi số dòng phân trang
-            });
-
-            new bootstrap.Modal(document.getElementById('gvDetailModal')).show();
-        }
-
-        function resetFilters() {
-            $('#selYear').val(new Date().getFullYear());
-            $('#selQuarter').val(''); $('#selMonth').val(''); $('#dateFrom').val(''); $('#dateTo').val(''); $('#filterStatus').val('all');
-            applyFilters();
-        }
-    </script>
-</body>
-</html>
+        function
