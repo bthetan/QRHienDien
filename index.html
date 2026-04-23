@@ -91,7 +91,6 @@
 
         .dt-buttons { margin-bottom: 15px; }
 
-        /* Tinh chỉnh Link Click trong bảng */
         .clickable-number {
             cursor: pointer;
             text-decoration: underline;
@@ -226,10 +225,16 @@
                     </div>
                     
                     <div class="row g-4">
-                        <div class="col-md-12">
+                        <div class="col-md-7">
                             <div class="card p-4 border-0 shadow-sm h-100">
                                 <h5 class="fw-bold mb-3"><i class="fa-solid fa-chart-pie me-2 text-danger"></i> Phân tích nhóm lỗi vi phạm phổ biến</h5>
                                 <div style="height: 350px;"><canvas id="violationReasonChart"></canvas></div>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="card p-4 border-0 shadow-sm h-100">
+                                <h5 class="fw-bold mb-3"><i class="fa-solid fa-layer-group me-2 text-warning"></i> Phân bổ lớp ghép theo Môn học</h5>
+                                <div style="height: 350px; display: flex; align-items: center;"><canvas id="lopGhepChart"></canvas></div>
                             </div>
                         </div>
                     </div>
@@ -341,10 +346,11 @@
         const API_URL = "https://hien-dien-qr.b-thetan.workers.dev/";
 
         let allData = []; 
-        let currentFilteredData = []; // Biến lưu trữ dữ liệu đã qua bộ lọc hiện tại
+        let currentFilteredData = []; 
         
         let table = null; let tableLecturer = null; let tableModal = null;
-        let roomChart = null; let fraudChart = null; let violationReasonChart = null;
+        let roomChart = null; let fraudChart = null; let violationReasonChart = null; 
+        let lopGhepChart = null; // Biến cho biểu đồ Lớp ghép
 
         $(document).ready(function () {
             if (localStorage.getItem('is_thanhtra_logged_in') === 'true') {
@@ -377,10 +383,7 @@
         function showDashboard() {
             $('#loginWrapper').addClass('d-none');
             $('#dashboardWrapper').removeClass('d-none');
-            
-            // Hiện loading (sử dụng class d-flex để giữ nguyên định dạng)
             $('#loadingOverlay').removeClass('d-none').addClass('d-flex');
-            
             initYearFilter();
             loadData();
         }
@@ -404,8 +407,6 @@
                 if (json.status === "success") {
                     allData = json.data;
                     applyFilters();
-                    
-                    // Ẩn loading mượt mà
                     $('#loadingOverlay').removeClass('d-flex').addClass('d-none');
                 }
             } catch (e) { alert("Lỗi tải dữ liệu!"); }
@@ -435,7 +436,7 @@
                 return true;
             });
             
-            currentFilteredData = filtered; // Lưu lại để dùng cho tính năng Click xem chi tiết
+            currentFilteredData = filtered;
             updateUI(filtered);
         }
 
@@ -445,13 +446,19 @@
             
             let gvStats = {}; 
             let vStats = {};
+            let lgStats = {}; // Biến thống kê Lớp ghép theo Môn
 
             data.forEach(r => {
                 totalMins += r.duration; gvs.add(r.giaoVien);
                 rooms[r.phong] = (rooms[r.phong] || 0) + r.duration;
 
-                if (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True') {
+                // Xử lý thống kê Lớp ghép
+                let isGhep = (r.lopGhep === true || r.LopGhep === true || r.lopGhep === 'True' || r.LopGhep === 'True');
+                if (isGhep) {
                     lopGhepCount++;
+                    // Lấy tên môn học (nếu có) hoặc đặt là "Khác"
+                    let monName = r.mon || r.Mon || r.monHoc || r.tenMon || 'Chưa xác định';
+                    lgStats[monName] = (lgStats[monName] || 0) + 1;
                 }
 
                 if (!gvStats[r.giaoVien]) {
@@ -486,9 +493,10 @@
 
             renderRoomChart(rooms);
             renderFraudChart(data.length - fraudCount, fraudCount);
-            renderTable(data);
-            
             renderViolationReasonChart(vStats);
+            renderLopGhepChart(lgStats); // Gọi render biểu đồ Lớp ghép
+
+            renderTable(data);
             renderLecturerTable(gvStats);
         }
 
@@ -524,6 +532,54 @@
                     responsive: true, maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
                     plugins: { legend: { display: false } }
+                } 
+            });
+        }
+
+        // HÀM RENDER BIỂU ĐỒ LỚP GHÉP
+        function renderLopGhepChart(lgData) {
+            const ctx = document.getElementById('lopGhepChart').getContext('2d');
+            
+            // Sắp xếp môn học có lớp ghép nhiều nhất
+            let sortedKeys = Object.keys(lgData).sort((a, b) => lgData[b] - lgData[a]);
+            let labels = [];
+            let values = [];
+            
+            // Lấy Top 5 môn ghép nhiều nhất, còn lại gom vào "Các môn khác"
+            if (sortedKeys.length > 5) {
+                labels = sortedKeys.slice(0, 5);
+                values = labels.map(l => lgData[l]);
+                let otherSum = sortedKeys.slice(5).reduce((sum, key) => sum + lgData[key], 0);
+                labels.push('Các môn khác');
+                values.push(otherSum);
+            } else {
+                labels = sortedKeys;
+                values = labels.map(l => lgData[l]);
+            }
+
+            // Xử lý trường hợp không có dữ liệu lớp ghép
+            if(labels.length === 0) {
+                labels = ['Chưa có dữ liệu'];
+                values = [1];
+            }
+
+            if (lopGhepChart) lopGhepChart.destroy();
+            lopGhepChart = new Chart(ctx, { 
+                type: 'pie', 
+                data: { 
+                    labels: labels, 
+                    datasets: [{ 
+                        data: values, 
+                        backgroundColor: ['#f39c12', '#3498db', '#9b59b6', '#e74c3c', '#2ecc71', '#95a5a6'], 
+                        borderWidth: 1 
+                    }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'right', labels: { boxWidth: 15 } } 
+                    }
                 } 
             });
         }
@@ -570,14 +626,12 @@
                     <td>${gv.hours.toLocaleString()}</td>
                     <td>${gv.classes.size}</td>
                     <td class="fw-bold">${gv.total}</td>
-                    
                     <td class="text-success fw-bold">
                         <a class="clickable-number text-success" onclick="openDetailModal('${gv.name}', false)">${gv.valid}</a>
                     </td>
                     <td class="text-danger fw-bold">
                         <a class="clickable-number text-danger" onclick="openDetailModal('${gv.name}', true)">${gv.fraud}</a>
                     </td>
-
                     <td><h5><span class="badge ${badgeClass}">${rate}%</span></h5></td>
                 </tr>`);
             });
@@ -590,9 +644,7 @@
             });
         }
 
-        // HÀM MỞ MODAL XEM CHI TIẾT
         function openDetailModal(teacherName, isFraudTarget) {
-            // Lọc dữ liệu dựa trên biến currentFilteredData đã áp dụng bộ lọc ngày/tháng
             let targetData = currentFilteredData.filter(r => r.giaoVien === teacherName && r.isFraud === isFraudTarget);
 
             if (tableModal) tableModal.destroy();
@@ -616,19 +668,15 @@
                 </tr>`);
             });
 
-            // Cập nhật tiêu đề modal
             let titleText = isFraudTarget ? `Danh sách Ca Vi Phạm - Giảng viên: ${teacherName}` : `Danh sách Ca Hợp Lệ - Giảng viên: ${teacherName}`;
             let titleColor = isFraudTarget ? 'text-danger' : 'text-success';
             $('#gvDetailModalTitle').removeClass('text-primary text-danger text-success').addClass(titleColor).text(titleText);
 
             tableModal = $('#tblModalDetail').DataTable({
                 language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/vi.json" },
-                order: [[0, "desc"]],
-                pageLength: 10,
-                lengthChange: false
+                order: [[0, "desc"]], pageLength: 10, lengthChange: false
             });
 
-            // Hiển thị Modal
             new bootstrap.Modal(document.getElementById('gvDetailModal')).show();
         }
 
